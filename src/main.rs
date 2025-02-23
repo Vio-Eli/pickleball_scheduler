@@ -75,14 +75,16 @@ fn remove_empty(teams: &mut HashMap<&str, HashSet<&str>>, opps: &mut HashMap<&st
 }
 
 fn scheduler() {
-    // Pickleball scheduler
-    //
-    // Input is 2 lists of players (Male + Female)
-    // Output is a list of doubles games to play ((m, f), (m, f))
-    //
-    // No two players should play together more than once
-    // No two players should play against each other more than once
-    // A player cannot play against themselves
+    /* Pickleball scheduler
+     *
+     * Input is 2 lists of players (Male + Female)
+     * Output is a list of doubles games to play ((m, f), (m, f))
+     *
+     * No two players should play together more than once
+     * No two players should play against each other more than once
+     * A player cannot play against themselves
+     *
+     */
 
     let mut men_vec = vec!["m1", "m2", "m3", "m4", "m5"];
     let mut counter: usize = 0;
