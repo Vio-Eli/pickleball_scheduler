@@ -3,6 +3,7 @@ use itertools::Itertools;
 use std::collections::HashSet;
 use rand::seq::SliceRandom;
 use rand::rng;
+use std::cmp::max;
 
 fn get_shared<T: Eq + std::hash::Hash + Clone>(sets: &[HashSet<T>]) -> HashSet<T> {
     sets.iter()
@@ -234,47 +235,46 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
         .collect()
 }
 
-fn games_to_courts(games: Vec<((String, String), (String, String))>, num_courts: u32) {
-    // -> Vec<(Vec<((String, String), (String, String))>, Vec<String>)>
-    let mut games = games;
+fn games_to_courts(mut games: Vec<((String, String), (String, String))>, num_courts: u32) -> Vec<(Vec<((String, String), (String, String))>, Vec<String>)> {
+
     let mut rounds = vec![];
+
+    let mut all_players: HashSet<String> = games.iter()
+        .flat_map(|((m1, w1), (m2, w2))| vec![m1.clone(), w1.clone(), m2.clone(), w2.clone()])
+        .collect();
+
 
     while !games.is_empty() {
         let mut current_games = vec![];
         let mut current_players = HashSet::new();
 
-        let mut counter = 0;
-
-        'courts: for _ in 0..num_courts {
-            loop {
-                if games.is_empty() {
-                    break 'courts;
-                }
-                let game = games[counter % games.len()].clone();
-                counter +=1 ;
-                let ((m1, w1), (m2, w2)) = game.clone();
-
-                if !current_players.contains(&m1) && !current_players.contains(&w1) && !current_players.contains(&m2) && !current_players.contains(&w2) {
-                    current_players.insert(m1.clone());
-                    current_players.insert(w1.clone());
-                    current_players.insert(m2.clone());
-                    current_players.insert(w2.clone());
-                    current_games.push(game.clone());
-
-                    games.remove(counter - 1);
-                    continue 'courts;
-                }
-
-                if counter % games.len() == 0 {
-                    break 'courts;
-                }
+        games.retain(|&((ref m1, ref w1), (ref m2, ref w2))| {
+            if current_games.len() >= num_courts as usize {
+                return true; // Stop early if the courts are full
             }
-        }
 
-        rounds.push(current_games);
+            if !current_players.contains(m1)
+                && !current_players.contains(w1)
+                && !current_players.contains(m2)
+                && !current_players.contains(w2) {
+                current_players.insert(m1.clone());
+                current_players.insert(w1.clone());
+                current_players.insert(m2.clone());
+                current_players.insert(w2.clone());
+                current_games.push(((m1.clone(), w1.clone()), (m2.clone(), w2.clone())));
+                false
+            } else {
+                true
+            }
+        });
+
+        let current_byes: Vec<String> = all_players.difference(&current_players).cloned().collect();
+
+        rounds.push((current_games, current_byes));
     }
 
     println!("Rounds: {:?}", rounds);
+    rounds
 }
 
 fn print_games(games: Vec<((&str, &str), (&str, &str))>) {
@@ -290,5 +290,5 @@ fn main() {
     let num_courts = 3;
 
     let games = scheduler(num_men, num_women);
-    games_to_courts(games, num_courts);
+    let rounds = games_to_courts(games, num_courts);
 }
