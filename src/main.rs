@@ -277,9 +277,54 @@ fn games_to_courts(mut games: Vec<((String, String), (String, String))>, num_cou
     rounds
 }
 
-fn print_games(games: Vec<((&str, &str), (&str, &str))>) {
-    for ((m1, w1), (m2, w2)) in games {
-        println!("{} & {} vs {} & {}", m1, w1, m2, w2);
+fn print_games(rounds: Vec<(Vec<((String, String), (String, String))>, Vec<String>)>, num_courts: u32) {
+    // Determine column widths dynamically
+    let mut court_widths = vec![10; num_courts as usize]; // Start with a minimum width of 10
+
+    for (games, _) in &rounds {
+        for (j, game) in games.iter().enumerate() {
+            let game_str = format!("{} & {} vs {} & {}", game.0 .0, game.0 .1, game.1 .0, game.1 .1);
+            if j < court_widths.len() {
+                court_widths[j] = max(court_widths[j], game_str.len());
+            }
+        }
+    }
+
+    let bye_width = rounds.iter()
+        .map(|(_, byes)| byes.join(", ").len())
+        .max()
+        .unwrap_or(10); // Ensure a minimum width of 10
+
+    // Print Header
+    print!("{:<6} ", "Round"); // Round column
+    for i in 1..=num_courts {
+        print!("{:<width$} ", format!("Court {}", i), width = court_widths[i as usize - 1]);
+    }
+    println!("{:<width$}", "Byes", width = bye_width);
+
+    // Print Separator
+    print!("{:-<6}-", ""); // Dash line under Round
+    for &width in &court_widths {
+        print!("{:-<width$}-", "", width = width);
+    }
+    println!("{:-<width$}", "", width = bye_width);
+
+    // Print Body
+    for (i, (games, byes)) in rounds.iter().enumerate() {
+        print!("{:<6} ", i + 1);
+
+        for j in 0..num_courts as usize {
+            if j < games.len() {
+                let ((m1, w1), (m2, w2)) = &games[j];
+                print!("{:<width$} ", format!("{} & {} vs {} & {}", m1, w1, m2, w2), width = court_widths[j]);
+            } else {
+                print!("{:<width$} ", "", width = court_widths[j]); // Empty court slot
+            }
+        }
+
+        // Print Byes
+        let bye_str = if byes.is_empty() { "-".to_string() } else { byes.join(", ") };
+        println!("{:<width$}", bye_str, width = bye_width);
     }
 }
 
@@ -291,4 +336,5 @@ fn main() {
 
     let games = scheduler(num_men, num_women);
     let rounds = games_to_courts(games, num_courts);
+    print_games(rounds, num_courts);
 }
