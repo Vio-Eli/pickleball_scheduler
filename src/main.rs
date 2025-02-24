@@ -74,7 +74,7 @@ fn remove_empty(teams: &mut HashMap<&str, HashSet<&str>>, opps: &mut HashMap<&st
     }
 }
 
-fn scheduler() {
+fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, String))> {
     /* Pickleball scheduler
      *
      * Input is 2 lists of players (Male + Female)
@@ -86,9 +86,16 @@ fn scheduler() {
      *
      */
 
-    let mut men_vec = vec!["m1", "m2", "m3", "m4", "m5"];
+    // let mut men_vec = vec!["m1", "m2", "m3", "m4", "m5", "m6"];
     let mut counter: usize = 0;
-    let mut women_vec = vec!["w1", "w2", "w3", "w4", "w5", "w6"];
+    // let mut women_vec = vec!["w1", "w2", "w3", "w4", "w5", "w6"];
+    let men_vec_owned: Vec<String> = (1..=num_men).map(|num| num.to_string()).collect();
+    let mut men_vec: Vec<&str> = men_vec_owned.iter().map(AsRef::as_ref).collect();
+    println!("MEN VEC: {:?}", men_vec);
+
+    let women_vec_owned: Vec<String> = (num_men + 1..=num_men + num_women).map(|num| num.to_string()).collect();
+    let mut women_vec: Vec<&str> = women_vec_owned.iter().map(AsRef::as_ref).collect();
+    println!("WOMEN VEC: {:?}", women_vec);
 
     // shuffle men and women
     men_vec.shuffle(&mut rng());
@@ -219,10 +226,69 @@ fn scheduler() {
         }
     }
 
-    println!("FINAL Games: {:?}", games);
+    // println!("FINAL Games: {:?}", games);
+    // print_games(games.clone());
+    games
+        .into_iter()
+        .map(|((a, b), (c, d))| ((a.to_string(), b.to_string()), (c.to_string(), d.to_string())))
+        .collect()
+}
+
+fn games_to_courts(games: Vec<((String, String), (String, String))>, num_courts: u32) {
+    // -> Vec<(Vec<((String, String), (String, String))>, Vec<String>)>
+    let mut games = games;
+    let mut rounds = vec![];
+
+    while !games.is_empty() {
+        let mut current_games = vec![];
+        let mut current_players = HashSet::new();
+
+        let mut counter = 0;
+
+        'courts: for _ in 0..num_courts {
+            loop {
+                if games.is_empty() {
+                    break 'courts;
+                }
+                let game = games[counter % games.len()].clone();
+                counter +=1 ;
+                let ((m1, w1), (m2, w2)) = game.clone();
+
+                if !current_players.contains(&m1) && !current_players.contains(&w1) && !current_players.contains(&m2) && !current_players.contains(&w2) {
+                    current_players.insert(m1.clone());
+                    current_players.insert(w1.clone());
+                    current_players.insert(m2.clone());
+                    current_players.insert(w2.clone());
+                    current_games.push(game.clone());
+
+                    games.remove(counter - 1);
+                    continue 'courts;
+                }
+
+                if counter % games.len() == 0 {
+                    break 'courts;
+                }
+            }
+        }
+
+        rounds.push(current_games);
+    }
+
+    println!("Rounds: {:?}", rounds);
+}
+
+fn print_games(games: Vec<((&str, &str), (&str, &str))>) {
+    for ((m1, w1), (m2, w2)) in games {
+        println!("{} & {} vs {} & {}", m1, w1, m2, w2);
+    }
 }
 
 
 fn main() {
-    scheduler();
+    let num_men = 6;
+    let num_women = 6;
+    let num_courts = 3;
+
+    let games = scheduler(num_men, num_women);
+    games_to_courts(games, num_courts);
 }
