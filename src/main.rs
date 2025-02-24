@@ -93,10 +93,11 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
     let men_vec_owned: Vec<String> = (1..=num_men).map(|num| num.to_string()).collect();
     let mut men_vec: Vec<&str> = men_vec_owned.iter().map(AsRef::as_ref).collect();
     println!("MEN VEC: {:?}", men_vec);
+    // println!("MEN VEC: {:?}", men_vec);
 
     let women_vec_owned: Vec<String> = (num_men + 1..=num_men + num_women).map(|num| num.to_string()).collect();
     let mut women_vec: Vec<&str> = women_vec_owned.iter().map(AsRef::as_ref).collect();
-    println!("WOMEN VEC: {:?}", women_vec);
+    // println!("WOMEN VEC: {:?}", women_vec);
 
     // shuffle men and women
     men_vec.shuffle(&mut rng());
@@ -123,8 +124,8 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
         opps.insert(w, (men.clone(), w_m.clone()));
     }
 
-    println!("Teams: {:?}", teams);
-    println!("Opps: {:?}", opps);
+    // println!("Teams: {:?}", teams);
+    // println!("Opps: {:?}", opps);
 
     let mut games: Vec<((&str, &str), (&str, &str))> = vec![];
 
@@ -141,20 +142,20 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
             let m = *men_vec[local_counter % men_vec.len()];
             local_counter += 1;
 
-            println!("BEGIN MEN: {:?}", men);
-            println!("m: {:?}", m);
+            // println!("BEGIN MEN: {:?}", men);
+            // println!("m: {:?}", m);
             let mut w_itr = teams.get(m).unwrap().iter();
 
             'p2: while let Some(w) = w_itr.next() {
                 // let mut w = w_itr.next().cloned().unwrap(); // get teammate from possible teammates hashmap
 
-                println!("dude: {:?}, girl: {:?}", m, w);
+                // println!("dude: {:?}, girl: {:?}", m, w);
 
                 // get opponents from possible opponents hashmap for both m and w
                 let mm_opps = opps.get(m).unwrap();
                 let mut ww_opps = opps.get(w).unwrap();
 
-                println!("mm_opps: {:?}, ww_opps: {:?}", mm_opps, ww_opps);
+                // println!("mm_opps: {:?}, ww_opps: {:?}", mm_opps, ww_opps);
 
                 // get the intersection of the opponents for m and w
                 let mut shared_m_opps = get_shared(&[mm_opps.0.clone(), ww_opps.0.clone()]);
@@ -164,7 +165,7 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
                 shared_m_opps.remove(m);
                 shared_w_opps.remove(w);
 
-                println!("shared_m_opps: {:?}, shared_w_opps: {:?}", shared_m_opps, shared_w_opps);
+                // println!("shared_m_opps: {:?}, shared_w_opps: {:?}", shared_m_opps, shared_w_opps);
 
                 if shared_m_opps.is_empty() || shared_w_opps.is_empty() {
                     continue 'p2;
@@ -174,17 +175,17 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
                 let mut opp_m_itr = shared_m_opps.iter();
                 // let mut opp_m = opp_m_itr.next().cloned().unwrap();
                 'p3: while let Some(opp_m) = opp_m_itr.next() {
-                    println!("opp_m: {:?}", opp_m);
+                    // println!("opp_m: {:?}", opp_m);
 
                     // get the possible women teammates for opp_m
                     let mut opp_m_team = teams.get(opp_m).unwrap();
 
-                    println!("opp_m_team: {:?}", opp_m_team);
+                    // println!("opp_m_team: {:?}", opp_m_team);
 
                     // get the intersection of the possible women teammates
                     let mut opp_w_team = get_shared(&[opp_m_team.clone(), shared_w_opps.clone()]);
 
-                    println!("opp_w_team: {:?}", opp_w_team);
+                    // println!("opp_w_team: {:?}", opp_w_team);
 
                     if opp_w_team.is_empty() {
                         continue 'p3;
@@ -193,7 +194,7 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
                     // get the next women opponent
                     let opp_w = opp_w_team.iter().next().cloned().unwrap();
 
-                    println!("opp_w: {:?}", opp_w);
+                    // println!("opp_w: {:?}", opp_w);
 
                     // add the game to the games list
                     games.push(((m, w), (opp_m, opp_w)));
@@ -204,9 +205,9 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
                     // If any player in teams has no possible teammates, remove them from the teams hashmap
                     remove_empty(&mut teams, &mut opps, &mut men);
 
-                    println!("Games: {:?}", games);
-                    println!("Teams: {:?}", teams);
-                    println!("Opps: {:?}", opps);
+                    // println!("Games: {:?}", games);
+                    // println!("Teams: {:?}", teams);
+                    // println!("Opps: {:?}", opps);
 
                     if teams.is_empty() || opps.is_empty() {
                         break 'out;
@@ -215,10 +216,10 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<((String, String), (String, St
                     continue 'out;
                 }
 
-                println!("Could not find a valid opponent for {:?}", m);
+                // println!("Could not find a valid opponent for {:?}", m);
             }
 
-            println!("Could not find a valid teammate for {:?}", m);
+            // println!("Could not find a valid teammate for {:?}", m);
 
             if local_counter % men_vec.len() == counter % men_vec.len() {
                 println!("All options exhausted. Terminating.");
