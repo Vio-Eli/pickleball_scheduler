@@ -134,7 +134,6 @@ fn remove_players(m: u32, w: u32, opp_m: u32, opp_w: u32,
 fn remove_empty(teams: &mut HashMap<u32, HashSet<u32>>,
                 opps: &mut HashMap<u32, (HashSet<u32>, HashSet<u32>)>,
                 ) {
-
     let mut to_remove: HashSet<u32> = teams.iter()
         .filter_map(|(k, v)| if v.is_empty() { Some(*k) } else { None })
         .chain(opps.iter()
@@ -167,43 +166,52 @@ fn remove_empty(teams: &mut HashMap<u32, HashSet<u32>>,
 
 
 fn scheduler(num_men: u32, num_women: u32) -> Vec<Game> {
-    /* Pickleball scheduler
+    /* Pickleball Scheduler
      *
-     * Input is 2 lists of players (Male + Female)
-     * Output is a list of doubles games to play ((m, f), (m, f))
+     * This function generates a schedule of mixed doubles games.
+     * Each game is between two teams: (man, woman) vs (man, woman)
      *
-     * No two players should play together more than once
-     * No two players should play against each other more than once
-     * A player cannot play against themselves
-     *
+     * Rules:
+     * - No two players team up more than once
+     * - No two players face each other more than once
+     * - Players never play against themselves
      */
 
+    // Initialize random number generator
     let mut rng = rng();
 
-    // Generate player lists
+    // Create player ID lists:
+    // Men: 1 to num_men
+    // Women: (num_men + 1) to (num_men + num_women)
     let mut men: Vec<u32> = (1..=num_men).collect();
     let mut women: Vec<u32> = (num_men + 1..=num_men + num_women).collect();
 
-    // Shuffle players for randomness
+    // Shuffle for randomness
     men.shuffle(&mut rng);
     women.shuffle(&mut rng);
 
-    // Create HashSets for quick lookup
+    // Convert to sets for fast lookup
     let mut men_set: HashSet<u32> = men.iter().cloned().collect();
     let mut women_set: HashSet<u32> = women.iter().cloned().collect();
 
-    // Initialize teams and opponents
+    // `teams` maps player ID to possible teammates
     let mut teams: HashMap<u32, HashSet<u32>> = HashMap::new();
+
+    // `opps` maps player ID to (possible opposing teammates, possible opposing opponents)
+    // For men: (men they can oppose, women they can oppose)
+    // For women: (men they can oppose, women they can oppose)
     let mut opps: HashMap<u32, (HashSet<u32>, HashSet<u32>)> = HashMap::new();
 
+    // Populate men’s possible teammates and opponents
     for m in men {
         let possible_teammates = women_set.clone();
         let mut possible_opponents = men_set.clone();
-        possible_opponents.remove(&m);
+        possible_opponents.remove(&m); // can't oppose yourself
         teams.insert(m, possible_teammates.clone());
         opps.insert(m, (possible_opponents.clone(), possible_teammates));
     }
 
+    // Populate women’s possible teammates and opponents
     for w in women {
         let possible_teammates = men_set.clone();
         let mut possible_opponents = women_set.clone();
@@ -214,29 +222,38 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<Game> {
 
     let mut games: Vec<Game> = vec![];
 
+    // Outer loop: run until no more valid games can be made
     'outer: while !teams.is_empty() {
         let mut men_vec: Vec<u32> = teams.keys().cloned().collect();
         if men_vec.is_empty() {
             break;
         }
 
-        men_vec.shuffle(&mut rng);
+        men_vec.shuffle(&mut rng); // randomize iteration order
+
         for m in men_vec {
             if !teams.contains_key(&m) {
-                continue;
+                continue; // already used
             }
 
             let possible_women = teams.get(&m).unwrap();
             if possible_women.is_empty() {
-                continue;
+                continue; // no available female teammate
             }
 
-            let &w = possible_women.iter().next().unwrap();
+            let &w = possible_women.iter().next().unwrap(); // pick a woman
 
             let (m_opps, w_opps) = opps.get(&m).unwrap();
-            let shared_m_opps: HashSet<_> = m_opps.intersection(&opps.get(&w).unwrap().0).cloned().collect();
-            let shared_w_opps: HashSet<_> = w_opps.intersection(&opps.get(&w).unwrap().1).cloned().collect();
+            let shared_m_opps: HashSet<_> = m_opps
+                .intersection(&opps.get(&w).unwrap().0)
+                .cloned()
+                .collect();
+            let shared_w_opps: HashSet<_> = w_opps
+                .intersection(&opps.get(&w).unwrap().1)
+                .cloned()
+                .collect();
 
+            // We need both an opposing man and woman
             if shared_m_opps.is_empty() || shared_w_opps.is_empty() {
                 continue;
             }
@@ -244,25 +261,28 @@ fn scheduler(num_men: u32, num_women: u32) -> Vec<Game> {
             let &opp_m = shared_m_opps.iter().next().unwrap();
             let &opp_w = shared_w_opps.iter().next().unwrap();
 
+            // Add game to the list
             games.push(Game {
                 team1: Team { p1: m, p2: w },
                 team2: Team { p1: opp_m, p2: opp_w },
             });
 
-            // Remove assigned players
+            // Remove all players from teams and opps
             remove_players(m, w, opp_m, opp_w, &mut teams, &mut opps);
 
-            // Remove empty teams and players
+            // Clean up any players who now have no options
             remove_empty(&mut teams, &mut opps);
 
+            // If we've used up all possible teams, break out
             if teams.is_empty() {
                 break 'outer;
             }
         }
     }
 
-    games
+    games // Return scheduled games
 }
+
 
 fn games_to_courts(mut games: Vec<Game>, num_courts: u32) -> Vec<Round> {
     let mut rounds = vec![];
