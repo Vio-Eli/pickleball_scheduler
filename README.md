@@ -38,29 +38,48 @@ These bounds live in code on [`Roster`](src/model.rs), and the
 | --- | --- |
 | [`model`](src/model.rs) | Domain types (`Man`, `Woman`, `Team`, `Game`, `Round`, `Schedule`, `Roster`) and the bounds |
 | [`verify`](src/verify.rs) | The single source of truth: legality + full quality report vs. the bounds |
+| [`construct`](src/construct.rs) | Algebraic constructors: HSOLSSOM (optimal) and reflection (universal), for balanced even `n` |
 | [`greedy`](src/greedy.rs) | Round-based randomized-greedy constructor — a fast "good enough" seed |
-| [`search`](src/search.rs) | Ruin-and-recreate local search + court-first builder; the main optimizer |
+| [`search`](src/search.rs) | Ruin-and-recreate local search + court-first builder + constructor integration; the main optimizer |
 | [`report`](src/report.rs) | The court grid and quality summary |
 
 Pipeline: **construct → verify → report.**
 
-## The three-way tension
+## The three-way tension — and how to escape it
 
 Max games, full courts, and minimal same-gender repeats **pull against each
 other**. A game set optimized purely for fewest repeats usually isn't
-*resolvable* — it won't pack into full rounds — so chasing the same-gender floor
-costs court utilization, and vice versa. This is a genuine Pareto tradeoff, so
-the optimizer exposes an **emphasis** knob:
+*resolvable* — it won't pack into full rounds — so a general local search that
+chases the same-gender floor pays for it in court utilization:
 
-| Emphasis | 6×6 result |
+| Emphasis (search) | 6×6 result |
 | --- | --- |
 | `courts` | 18 games, **6 full rounds (100% courts)**, ~15 same-gender repeats |
 | `variety` | 18 games, **same-gender floor (3+3)**, ~65% court utilization |
 | `balanced` | picks whichever corner scores better (default) |
 
-Hitting *both* corners at once — full courts **and** the repeat floor — is what
-the algebraic constructor is for (see roadmap); a general local search can't
-reliably reach it for balanced rosters.
+The **algebraic constructor** escapes the tension for the balanced case by
+building a resolvable saturated design directly. For even `n ≥ 10` an
+**HSOLSSOM**-based construction (Berman–Wakeling) hits *all four* optima at once
+— game ceiling, full courts, **and** both same-gender floors:
+
+```
+10×10, 5 courts:  50/50 games · 10 rounds · 100% courts · man 5/5 ✓ · woman 5/5 ✓
+```
+
+Coverage today:
+
+| Even `n` | Best achievable | What the tool does |
+| --- | --- | --- |
+| `n = 10` | full optimum (all four) | HSOLSSOM built at runtime ✓ |
+| `n ≥ 12` | full optimum *exists* (proven) | runtime backtracker doesn't scale yet → falls back to reflection / search |
+| `n ∈ {4,6,8}` | full optimum **provably impossible** | reflection (legal+full) or `variety` search |
+
+The **reflection** construction is the universal safety net: deterministic,
+legal (both hard ledgers saturated), and fully packed for *every* even `n`,
+trading only the soft floors (same-gender ≈ `n²/4`). Extending the runtime
+optimum to `n ≥ 12` wants cached squares or the recursive HSOLSSOM
+constructions rather than blind backtracking.
 
 ## Usage
 
@@ -76,9 +95,11 @@ cargo run -- [men] [women] [courts] [emphasis] [ls_iters] [seed]
 - [x] Round-based greedy seed (soft same-gender, fills courts)
 - [x] **Local search** — ruin-and-recreate on the same-gender objective, plus a
       court-first builder, with an emphasis knob along the Pareto frontier
-- [ ] **Optimal constructor** — cyclic/algebraic build that reaches the game
-      ceiling *and* the same-gender floor *and* full courts at once for balanced
-      cases (with a short search for the small exceptional `n`)
+- [x] **Optimal constructor** — HSOLSSOM build hitting all four optima at once
+      for `n = 10` (verified); reflection as the universal legal+full fallback;
+      `n ∈ {4,6,8}` shown provably impossible
+- [ ] **Scale the optimum to `n ≥ 12`** — cached HSOLSSOM tables or the
+      recursive design-theory constructions (backtracking alone doesn't scale)
 - [ ] **Part 2** — target modes: each player plays exactly *N* games, and/or a
       hard total-game cap, relaxing the once-only rules toward their minimum
 - [ ] **Exact solver** (CP-SAT / ILP) as an opt-in "prove it's optimal" mode

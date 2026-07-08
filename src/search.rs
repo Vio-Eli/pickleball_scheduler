@@ -22,6 +22,7 @@
 //! The verifier remains the final oracle — [`optimize`] returns a `Schedule`
 //! that `verify` scores exactly like any other.
 
+use crate::construct::{hsolssom, reflection};
 use crate::model::{Game, Man, Player, Roster, Round, Schedule, Team, Woman};
 use crate::verify::{verify, Report};
 use rand::rngs::StdRng;
@@ -422,17 +423,48 @@ pub fn optimize(
     seed: u64,
 ) -> Schedule {
     let mut rng = StdRng::seed_from_u64(seed);
+    let n = roster.men as usize;
+    let balanced_even = roster.women as usize == n && n >= 2 && n % 2 == 0;
 
-    // Build a handful of fully-formed, repacked candidate schedules that span
-    // the frontier:
-    //   * the court-first restart-greedy (reliably fully-packed, low rounds);
-    //   * several ruin-and-recreate runs (low same-gender, possibly ragged).
+    // Optimal algebraic construction: when an HSOLSSOM build succeeds it is
+    // provably optimal on *all four* objectives at once (both hard ledgers
+    // saturated, full courts, both same-gender excesses at floor), so it
+    // dominates every heuristic candidate under any emphasis — return it
+    // directly. Its native layout is n rounds of n/2 games; if the caller has
+    // fewer courts than n/2 we keep the (still-optimal) game set and repack.
+    if balanced_even {
+        if let Some(sched) = hsolssom(roster) {
+            if verify(&sched, roster, courts).is_legal() {
+                if courts as usize >= n / 2 {
+                    return sched;
+                }
+                let games: Vec<Game> = sched.all_games().copied().collect();
+                return repack(&games, courts, &mut rng);
+            }
+        }
+    }
+
+    // Otherwise assemble candidate schedules spanning the frontier and let the
+    // emphasis-weighted selection choose.
     let mut candidates: Vec<Schedule> = Vec::new();
 
     // Court-first candidate: keep its own fully-packed round structure (the
     // low-round corner) — repacking it blindly would only scatter it.
     let cf = court_first(roster, courts, 200, &mut rng);
     candidates.push(Schedule::new(cf.into_iter().map(Round::new).collect()));
+
+    // Reflection candidate (balanced even n): deterministic, legal, fully
+    // packed — a strong court-emphasis option when HSOLSSOM isn't available.
+    if balanced_even {
+        if let Some(refl) = reflection(roster) {
+            if courts as usize >= n / 2 {
+                candidates.push(refl);
+            } else {
+                let games: Vec<Game> = refl.all_games().copied().collect();
+                candidates.push(repack(&games, courts, &mut rng));
+            }
+        }
+    }
 
     // Variety candidates: ruin-and-recreate (low same-gender corner), which
     // have no round structure of their own, so repack them tightly.

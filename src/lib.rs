@@ -4,6 +4,7 @@
 //! The pipeline is: construct a schedule (currently [`greedy`]), then
 //! [`verify`] it against those bounds, then [`report`] it.
 
+pub mod construct;
 pub mod greedy;
 pub mod model;
 pub mod report;
@@ -126,6 +127,52 @@ mod tests {
         assert!(excess <= 9, "same-gender excess {} (floor 6)", excess);
         // Nobody should face the same opponent 3× when 2× suffices.
         assert!(r.man_max_meetings <= 2 && r.woman_max_meetings <= 2);
+    }
+
+    #[test]
+    fn reflection_is_legal_and_full_for_all_even_n() {
+        use crate::construct::reflection;
+        for n in [4u16, 6, 8, 10, 12, 14, 16] {
+            let roster = Roster::new(n, n);
+            let s = reflection(roster).expect("reflection applies to even n");
+            let r = verify(&s, roster, n / 2);
+            assert!(r.is_legal(), "reflection illegal for n={}: {:?}", n, r.violations);
+            assert_eq!(r.games, r.max_games, "reflection missed ceiling for n={}", n);
+            assert_eq!(r.rounds, n as usize, "reflection not fully packed for n={}", n);
+        }
+        // Not a balanced-even case.
+        assert!(reflection(Roster::new(5, 5)).is_none());
+        assert!(reflection(Roster::new(6, 8)).is_none());
+    }
+
+    #[test]
+    fn hsolssom_hits_full_target_on_10x10() {
+        use crate::construct::hsolssom;
+        let roster = Roster::new(10, 10);
+        let s = hsolssom(roster).expect("HSOLSSOM exists for n=10");
+        let r = verify(&s, roster, 5);
+        assert!(r.is_legal(), "HSOLSSOM illegal: {:?}", r.violations);
+        assert_eq!(r.games, 50);
+        assert_eq!(r.rounds, 10);
+        assert!((r.court_utilization - 1.0).abs() < 1e-9, "not full courts");
+        assert_eq!(r.man_repeat_excess, r.man_repeat_floor, "man not at floor");
+        assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor, "woman not at floor");
+        // n < 10 is not this constructor's domain.
+        assert!(hsolssom(Roster::new(8, 8)).is_none());
+    }
+
+    #[test]
+    fn optimize_returns_optimal_construction_on_10x10() {
+        use crate::search::{optimize, EMPHASIS_BALANCED};
+        let roster = Roster::new(10, 10);
+        let s = optimize(roster, 5, 5_000, EMPHASIS_BALANCED, 1);
+        let r = verify(&s, roster, 5);
+        // The optimizer should short-circuit to the optimal construction.
+        assert!(r.is_legal());
+        assert_eq!(r.games, 50);
+        assert_eq!(r.rounds, 10);
+        assert_eq!(r.man_repeat_excess, r.man_repeat_floor);
+        assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor);
     }
 
     #[test]
