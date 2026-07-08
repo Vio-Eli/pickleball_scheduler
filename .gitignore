@@ -101,3 +101,6 @@ fabric.properties
 # Added by cargo
 
 /target
+
+# Claude Code local settings (auto-accumulated permission allowlists, etc.)
+.claude/
