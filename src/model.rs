@@ -246,4 +246,24 @@ impl Roster {
     pub fn min_woman_repeats(&self, games: usize) -> usize {
         games.saturating_sub(self.distinct_woman_pairs())
     }
+
+    /// Number of distinct `(man, woman)` pairs — the size of both the
+    /// partnership and the mixed-opposition ledger: `men · women`.
+    pub fn distinct_pairs(&self) -> usize {
+        self.men as usize * self.women as usize
+    }
+
+    /// The unavoidable number of *partnership* repeats when a schedule plays
+    /// `games` games. Each game uses two partnerships, and there are only
+    /// `men · women` distinct ones: `max(0, 2·games − men·women)`. Zero at or
+    /// below the game ceiling; positive only when Part 2 pushes past it.
+    pub fn min_partner_repeats(&self, games: usize) -> usize {
+        (2 * games).saturating_sub(self.distinct_pairs())
+    }
+
+    /// Likewise for mixed oppositions (same ledger size): `max(0, 2·games −
+    /// men·women)`.
+    pub fn min_mixed_repeats(&self, games: usize) -> usize {
+        (2 * games).saturating_sub(self.distinct_pairs())
+    }
 }

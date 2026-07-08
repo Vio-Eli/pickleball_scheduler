@@ -74,12 +74,17 @@ pub fn print_report(report: &Report) {
     );
     println!("{}", "=".repeat(56));
 
-    let legal = if report.is_legal() { "LEGAL" } else { "ILLEGAL" };
-    println!("Legality:         {}", legal);
-    if !report.is_legal() {
+    // Structural soundness is always required; the once-rules are hard for
+    // Part 1 (shown as LEGAL) but soft for Part 2 (shown via the repeat lines).
+    if !report.is_structurally_valid() {
+        println!("Structure:        INVALID");
         for v in &report.violations {
             println!("  ! {:?}", v);
         }
+    } else if report.is_legal() {
+        println!("Legality:         LEGAL (no partnership or opponent repeats)");
+    } else {
+        println!("Structure:        valid (once-rules relaxed — see repeats below)");
     }
 
     println!(
@@ -88,6 +93,22 @@ pub fn print_report(report: &Report) {
         report.max_games,
         if report.hits_game_ceiling() { "   ← ceiling ✓" } else { "" }
     );
+    // Partnership / mixed-opposition repeats — 0 for Part 1, meaningful when a
+    // Part 2 target pushes past the ceiling.
+    if report.partner_repeat_excess > 0 || report.partner_repeat_floor > 0 {
+        println!(
+            "Partner repeats:  {} extra (floor {}){}",
+            report.partner_repeat_excess,
+            report.partner_repeat_floor,
+            if report.partner_repeat_excess == report.partner_repeat_floor { " ✓" } else { "" }
+        );
+        println!(
+            "Opponent repeats: {} extra (floor {}){}   (mixed man vs woman)",
+            report.mixed_repeat_excess,
+            report.mixed_repeat_floor,
+            if report.mixed_repeat_excess == report.mixed_repeat_floor { " ✓" } else { "" }
+        );
+    }
     println!(
         "Rounds:           {}   (court utilization {:.0}%)",
         report.rounds,

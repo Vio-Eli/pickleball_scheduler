@@ -81,12 +81,39 @@ trading only the soft floors (same-gender ≈ `n²/4`). Extending the runtime
 optimum to `n ≥ 12` wants cached squares or the recursive HSOLSSOM
 constructions rather than blind backtracking.
 
+## Part 2 — target a fixed amount of play
+
+Part 1 maximizes games. Part 2 fixes *how much* everyone plays and makes the
+once-rules **soft** — minimized toward their floor instead of forbidden. Add a
+target token:
+
+```
+cargo run -- 8 8 4 each=6      # everyone plays about 6 games
+cargo run -- 8 8 4 total=30    # cap the schedule at exactly 30 games
+```
+
+* **Below the ceiling** there's slack, so partnerships and mixed oppositions
+  still never repeat, courts stay full, and play is fair.
+* **Above the ceiling** repeats are forced — and the builder lands *every* ledger
+  on its floor. E.g. 6×6, `each=8` → 24 games with partner **12/12**, opponent
+  **12/12**, man **9/9**, woman **9/9**, everyone plays exactly 8.
+* When `each = n` at full courts the target *is* the full round-robin, so it
+  delegates to Part 1 (and inherits the optimal construction).
+
+Note: for **unbalanced** rosters (M ≠ W) each player can't play the same number
+of games — men play `2G/M`, women `2G/W` — so `each=N` is an average and skews
+by the M:W ratio; participation stays tight *within* each gender.
+
 ## Usage
 
 ```
+# Part 1 (maximize games):
 cargo run -- [men] [women] [courts] [emphasis] [ls_iters] [seed]
-# defaults: 6 6 3 balanced 40000
-# emphasis: courts | balanced | variety
+# defaults: 6 6 3 balanced 40000 ; emphasis: courts | balanced | variety
+
+# Part 2 (target play): add each=N or total=G
+cargo run -- [men] [women] [courts] each=N
+cargo run -- [men] [women] [courts] total=G
 ```
 
 ## Roadmap
@@ -98,9 +125,10 @@ cargo run -- [men] [women] [courts] [emphasis] [ls_iters] [seed]
 - [x] **Optimal constructor** — HSOLSSOM build hitting all four optima at once
       for `n = 10` (verified); reflection as the universal legal+full fallback;
       `n ∈ {4,6,8}` shown provably impossible
+- [x] **Part 2** — target modes: `each=N` (per-player) and `total=G` (hard cap),
+      relaxing the once-rules toward their floor; hits every ledger floor above
+      the ceiling, stays legal + fair below it
 - [ ] **Scale the optimum to `n ≥ 12`** — cached HSOLSSOM tables or the
       recursive design-theory constructions (backtracking alone doesn't scale)
-- [ ] **Part 2** — target modes: each player plays exactly *N* games, and/or a
-      hard total-game cap, relaxing the once-only rules toward their minimum
 - [ ] **Exact solver** (CP-SAT / ILP) as an opt-in "prove it's optimal" mode
 - [ ] GUI, team/single-list input

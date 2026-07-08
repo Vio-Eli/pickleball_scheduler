@@ -9,6 +9,7 @@ pub mod greedy;
 pub mod model;
 pub mod report;
 pub mod search;
+pub mod target;
 pub mod verify;
 
 #[cfg(test)]
@@ -171,6 +172,62 @@ mod tests {
         assert!(r.is_legal());
         assert_eq!(r.games, 50);
         assert_eq!(r.rounds, 10);
+        assert_eq!(r.man_repeat_excess, r.man_repeat_floor);
+        assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor);
+    }
+
+    #[test]
+    fn part2_below_ceiling_is_legal_and_fair() {
+        use crate::target::by_games_per_player;
+        // 6×6, each plays 4 → 12 games, below the 18 ceiling: no forced repeats.
+        let roster = Roster::new(6, 6);
+        let s = by_games_per_player(roster, 3, 4, 1);
+        let r = verify(&s, roster, 3);
+        assert!(r.is_structurally_valid());
+        assert!(r.is_legal(), "below ceiling should have no partner/opp repeats");
+        assert_eq!(r.games, 12);
+        assert_eq!(r.rounds, 4);
+        assert_eq!(r.participation_spread(), 0, "balanced full courts ⇒ everyone plays 4");
+    }
+
+    #[test]
+    fn part2_above_ceiling_hits_all_floors() {
+        use crate::target::by_games_per_player;
+        // 6×6, each plays 8 → 24 games, past the 18 ceiling: repeats forced but
+        // every ledger should land exactly on its floor.
+        let roster = Roster::new(6, 6);
+        let s = by_games_per_player(roster, 3, 8, 1);
+        let r = verify(&s, roster, 3);
+        assert!(r.is_structurally_valid());
+        assert_eq!(r.games, 24);
+        assert_eq!(r.participation_spread(), 0);
+        assert_eq!(r.partner_repeat_excess, r.partner_repeat_floor, "partner floor");
+        assert_eq!(r.mixed_repeat_excess, r.mixed_repeat_floor, "mixed floor");
+        assert_eq!(r.man_repeat_excess, r.man_repeat_floor, "man floor");
+        assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor, "woman floor");
+    }
+
+    #[test]
+    fn part2_total_cap_is_exact() {
+        use crate::target::by_total_games;
+        let roster = Roster::new(6, 6);
+        for g in [7usize, 9, 10, 15] {
+            let s = by_total_games(roster, 3, g, 2);
+            let r = verify(&s, roster, 3);
+            assert!(r.is_structurally_valid());
+            assert_eq!(r.games, g, "total cap not exact for g={}", g);
+        }
+    }
+
+    #[test]
+    fn part2_full_target_delegates_to_optimum() {
+        use crate::target::by_games_per_player;
+        // each = n at full courts is the full round-robin → Part 1 optimum.
+        let roster = Roster::new(10, 10);
+        let s = by_games_per_player(roster, 5, 10, 1);
+        let r = verify(&s, roster, 5);
+        assert!(r.is_legal());
+        assert_eq!(r.games, 50);
         assert_eq!(r.man_repeat_excess, r.man_repeat_floor);
         assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor);
     }

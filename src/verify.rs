@@ -40,6 +40,16 @@ pub struct Report {
     pub max_games: usize,
     pub rounds: usize,
 
+    /// Extra partnership uses beyond the first, summed. Zero for a Part 1
+    /// schedule (hard); positive only when a Part 2 target pushes past the game
+    /// ceiling and partnerships must repeat.
+    pub partner_repeat_excess: usize,
+    /// The unavoidable floor for `partner_repeat_excess` at this game count.
+    pub partner_repeat_floor: usize,
+    /// Extra mixed-opposition uses beyond the first, summed.
+    pub mixed_repeat_excess: usize,
+    pub mixed_repeat_floor: usize,
+
     /// Extra man–man encounters beyond the first for each pair, summed.
     pub man_repeat_excess: usize,
     /// The unavoidable floor for `man_repeat_excess` at this game count.
@@ -63,10 +73,25 @@ pub struct Report {
 }
 
 impl Report {
-    /// Legal ⇔ no hard or structural violations. Soft same-gender repeats do
+    /// Legal ⇔ no hard or structural violations. This is the Part 1 bar: no
+    /// partnership or mixed-opposition ever repeats. Soft same-gender repeats do
     /// not affect legality.
     pub fn is_legal(&self) -> bool {
         self.violations.is_empty()
+    }
+
+    /// Structurally sound: every game well-formed, in range, and no player
+    /// double-booked within a round. This is the bar for Part 2, where
+    /// partnership/mixed repeats are *expected* (soft) rather than forbidden.
+    pub fn is_structurally_valid(&self) -> bool {
+        !self.violations.iter().any(|v| {
+            matches!(
+                v,
+                Violation::Malformed { .. }
+                    | Violation::OutOfRange { .. }
+                    | Violation::DoubleBooked { .. }
+            )
+        })
     }
 
     /// At the partnership ceiling — the most games this roster can support.
@@ -186,6 +211,8 @@ pub fn verify(schedule: &Schedule, roster: Roster, courts: u16) -> Report {
 
     let (man_repeat_excess, man_max_meetings) = repeat_stats(&man_counts);
     let (woman_repeat_excess, woman_max_meetings) = repeat_stats(&woman_counts);
+    let (partner_repeat_excess, _) = repeat_stats(&partner_counts);
+    let (mixed_repeat_excess, _) = repeat_stats(&mixed_counts);
 
     let games = schedule.num_games();
     let rounds = schedule.num_rounds();
@@ -203,6 +230,10 @@ pub fn verify(schedule: &Schedule, roster: Roster, courts: u16) -> Report {
         games,
         max_games: roster.max_games(),
         rounds,
+        partner_repeat_excess,
+        partner_repeat_floor: roster.min_partner_repeats(games),
+        mixed_repeat_excess,
+        mixed_repeat_floor: roster.min_mixed_repeats(games),
         man_repeat_excess,
         man_repeat_floor: roster.min_man_repeats(games),
         man_max_meetings,
