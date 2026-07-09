@@ -59,27 +59,43 @@ chases the same-gender floor pays for it in court utilization:
 | `balanced` | picks whichever corner scores better (default) |
 
 The **algebraic constructor** escapes the tension for the balanced case by
-building a resolvable saturated design directly. For even `n ≥ 10` an
+building a resolvable saturated design directly. For the right even `n` an
 **HSOLSSOM**-based construction (Berman–Wakeling) hits *all four* optima at once
 — game ceiling, full courts, **and** both same-gender floors:
 
 ```
 10×10, 5 courts:  50/50 games · 10 rounds · 100% courts · man 5/5 ✓ · woman 5/5 ✓
+14×14, 7 courts:  98/98 games · 14 rounds · 100% courts · man 7/7 ✓ · woman 7/7 ✓
+18×18, 9 courts: 162/162 games · 18 rounds · 100% courts · man 9/9 ✓ · woman 9/9 ✓
 ```
 
-Coverage today:
+Coverage today (embedded, pre-verified tables in [`tables`](src/tables.rs)):
 
 | Even `n` | Best achievable | What the tool does |
 | --- | --- | --- |
-| `n = 10` | full optimum (all four) | HSOLSSOM built at runtime ✓ |
-| `n ≥ 12` | full optimum *exists* (proven) | runtime backtracker doesn't scale yet → falls back to reflection / search |
-| `n ∈ {4,6,8}` | full optimum **provably impossible** | reflection (legal+full) or `variety` search |
+| `n ∈ {10, 14, 18}` (odd `m = n/2`) | full optimum (all four) | **cached HSOLSSOM, instant** ✓ |
+| `n ∈ {12, 16, 20, …}` (even `m`) | full optimum *exists* (proven) | not yet generated → reflection / `variety` search |
+| `n ∈ {4, 6, 8}` | full optimum **provably impossible** | reflection (legal+full) or `variety` search |
+
+An empirical split showed up while generating tables: every construction we
+tried (finite-field, recursive, CP-SAT) cracks **odd `m`** and stalls on
+**even `m`** (`n ≡ 0 mod 4`) — thousands of attempts, no frame. Those designs
+exist, but reaching them needs a proper *recursive* HSOLSSOM construction
+(building the even-`m` frame from smaller ingredients), which is future work.
 
 The **reflection** construction is the universal safety net: deterministic,
 legal (both hard ledgers saturated), and fully packed for *every* even `n`,
-trading only the soft floors (same-gender ≈ `n²/4`). Extending the runtime
-optimum to `n ≥ 12` wants cached squares or the recursive HSOLSSOM
-constructions rather than blind backtracking.
+trading only the soft floors (same-gender ≈ `n²/4`).
+
+### Rosters need not be balanced
+
+`M ≠ W` works throughout — the verifier, both Part 1 emphasis modes, and both
+Part 2 modes handle it (the algebraic constructor is the only balanced-only
+piece; unbalanced rosters fall back to the heuristic, which thrives on the extra
+slack). Two facts are then forced by arithmetic, not bugs: the two genders play
+different counts (each man `2G/M`, each woman `2G/W`, so the scarcer gender
+plays more and the larger gender rotates through byes), and the fieldable games
+per round is capped at `⌊min(M,W)/2⌋` (extra courts sit idle).
 
 ## Part 2 — target a fixed amount of play
 
@@ -122,13 +138,14 @@ cargo run -- [men] [women] [courts] total=G
 - [x] Round-based greedy seed (soft same-gender, fills courts)
 - [x] **Local search** — ruin-and-recreate on the same-gender objective, plus a
       court-first builder, with an emphasis knob along the Pareto frontier
-- [x] **Optimal constructor** — HSOLSSOM build hitting all four optima at once
-      for `n = 10` (verified); reflection as the universal legal+full fallback;
-      `n ∈ {4,6,8}` shown provably impossible
+- [x] **Optimal constructor** — HSOLSSOM hitting all four optima at once;
+      cached pre-verified tables for `n ∈ {10,14,18}` (odd `m`); reflection as the
+      universal legal+full fallback; `n ∈ {4,6,8}` shown provably impossible
 - [x] **Part 2** — target modes: `each=N` (per-player) and `total=G` (hard cap),
       relaxing the once-rules toward their floor; hits every ledger floor above
       the ceiling, stays legal + fair below it
-- [ ] **Scale the optimum to `n ≥ 12`** — cached HSOLSSOM tables or the
-      recursive design-theory constructions (backtracking alone doesn't scale)
+- [ ] **Even-`m` optimum** (`n ∈ {12,16,20,…}`, `n ≡ 0 mod 4`) — needs a
+      recursive HSOLSSOM construction; search/CP-SAT don't reach these frames.
+      Drop-in once generated: add the table JSON, re-run `make_tables.py`
 - [ ] **Exact solver** (CP-SAT / ILP) as an opt-in "prove it's optimal" mode
 - [ ] GUI, team/single-list input
