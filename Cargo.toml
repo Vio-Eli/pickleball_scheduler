@@ -3,5 +3,19 @@ name = "pickleball_scheduler"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+# cdylib for the wasm build; rlib so the CLI bin and tests still link the crate.
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
-rand = "0.9.0"
+# default-features off drops `os_rng`/getrandom (we only ever use seeded StdRng),
+# which lets the crate compile to wasm32-unknown-unknown with no JS entropy shim.
+rand = { version = "0.9.0", default-features = false, features = ["std", "std_rng"] }
+wasm-bindgen = { version = "0.2", optional = true }
+
+[features]
+wasm = ["dep:wasm-bindgen"]
+
+# The wasm is tiny (only rand); skip wasm-opt so CI needs no binaryen install.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
