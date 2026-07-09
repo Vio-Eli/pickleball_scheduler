@@ -146,6 +146,7 @@ cargo run -- [men] [women] [courts] total=G
       the ceiling, stays legal + fair below it
 - [ ] **Even-`m` optimum** (`n ∈ {12,16,20,…}`, `n ≡ 0 mod 4`) — needs a
       recursive HSOLSSOM construction; search/CP-SAT don't reach these frames.
-      Drop-in once generated: add the table JSON, re-run `make_tables.py`
+      Drop-in once generated: add the table JSON, re-run `tools/make_tables.py`
+      (see [`tools/`](tools/README.md))
 - [ ] **Exact solver** (CP-SAT / ILP) as an opt-in "prove it's optimal" mode
 - [ ] GUI, team/single-list input
