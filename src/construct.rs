@@ -265,15 +265,46 @@ fn build_w(n: usize, s: &[Vec<i32>], order: &[usize], budget: &mut u64) -> Optio
     }
 }
 
+/// Rebuild a schedule from a cached table of `[[manA,womanA],[manB,womanB]]`
+/// games grouped into rounds.
+fn schedule_from_table(rounds: &[&[crate::tables::G]]) -> Schedule {
+    Schedule::new(
+        rounds
+            .iter()
+            .map(|r| {
+                Round::new(
+                    r.iter()
+                        .map(|g| {
+                            Game::new(
+                                Team::new(Man(g[0][0]), Woman(g[0][1])),
+                                Team::new(Man(g[1][0]), Woman(g[1][1])),
+                            )
+                        })
+                        .collect(),
+                )
+            })
+            .collect(),
+    )
+}
+
 /// Optimal construction for even `n ≥ 10`: all four targets at once (both hard
 /// ledgers saturated, full courts, both same-gender excesses at the floor
-/// `n/2`). Returns `None` for `n < 10`, odd `n`, `M ≠ W`, `n > 64`, or if the
-/// backtracking budget is exhausted.
+/// `n/2`). Returns `None` for `n < 10`, odd `n`, `M ≠ W`, `n > 64`, or if no
+/// cached table exists and the backtracking budget is exhausted.
+///
+/// Cached tables (embedded, pre-verified) are used when present — instant and
+/// deterministic — otherwise a randomized-restart backtracker runs, which only
+/// scales to about `n = 10`.
 pub fn hsolssom(roster: Roster) -> Option<Schedule> {
     let n = roster.men as usize;
     if roster.women as usize != n || n < 10 || n % 2 != 0 || n > 64 {
         return None;
     }
+
+    if let Some(rounds) = crate::tables::cached(n) {
+        return Some(schedule_from_table(rounds));
+    }
+
     let m = n / 2;
 
     // Randomized-restart backtracking. This reliably builds the frame for

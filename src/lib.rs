@@ -9,6 +9,7 @@ pub mod greedy;
 pub mod model;
 pub mod report;
 pub mod search;
+pub mod tables;
 pub mod target;
 pub mod verify;
 
@@ -160,6 +161,29 @@ mod tests {
         assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor, "woman not at floor");
         // n < 10 is not this constructor's domain.
         assert!(hsolssom(Roster::new(8, 8)).is_none());
+    }
+
+    #[test]
+    fn cached_tables_all_hit_full_target() {
+        // Every embedded table must survive our own verifier: all four optima.
+        use crate::construct::hsolssom;
+        let mut checked = 0;
+        for n in (10u16..=64).step_by(2) {
+            if crate::tables::cached(n as usize).is_none() {
+                continue;
+            }
+            let roster = Roster::new(n, n);
+            let s = hsolssom(roster).expect("cached table builds");
+            let r = verify(&s, roster, n / 2);
+            assert!(r.is_legal(), "cached n={} illegal: {:?}", n, r.violations);
+            assert_eq!(r.games, r.max_games, "cached n={} games", n);
+            assert_eq!(r.rounds, n as usize, "cached n={} rounds", n);
+            assert!((r.court_utilization - 1.0).abs() < 1e-9, "cached n={} util", n);
+            assert_eq!(r.man_repeat_excess, r.man_repeat_floor, "cached n={} man floor", n);
+            assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor, "cached n={} woman floor", n);
+            checked += 1;
+        }
+        assert!(checked >= 3, "expected at least the n=10/14/18 tables, checked {}", checked);
     }
 
     #[test]
