@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pickleball Scheduler</title>
+    <meta
+      name="description"
+      content="Fair mixed-doubles round-robin schedules: everyone partners and opposes with maximum variety and full courts."
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%BE%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <h1><span class="ball">🎾</span> Pickleball Scheduler</h1>
+        <p class="tagline">
+          Mixed-doubles round-robins where everyone partners and faces everyone
+          with the most variety — and the courts stay full.
+        </p>
+      </header>
+
+      <main>
+        <section class="card controls" aria-label="Schedule settings">
+          <!-- Roster -->
+          <div class="field">
+            <div class="field-head">
+              <label>Players</label>
+              <div class="tabs" role="tablist">
+                <button class="tab active" data-roster="counts" role="tab">Quick counts</button>
+                <button class="tab" data-roster="names" role="tab">Names</button>
+              </div>
+            </div>
+
+            <div class="roster-pane" data-pane="counts">
+              <div class="counts">
+                <label class="mini">Men
+                  <input type="number" id="men" min="0" max="30" value="6" />
+                </label>
+                <span class="times">×</span>
+                <label class="mini">Women
+                  <input type="number" id="women" min="0" max="30" value="6" />
+                </label>
+              </div>
+            </div>
+
+            <div class="roster-pane" data-pane="names" hidden>
+              <div class="names">
+                <label class="mini">Men <small>(one per line)</small>
+                  <textarea id="menNames" rows="5" placeholder="Alice&#10;Bob&#10;Carlos"></textarea>
+                </label>
+                <label class="mini">Women <small>(one per line)</small>
+                  <textarea id="womenNames" rows="5" placeholder="Dana&#10;Evie&#10;Fran"></textarea>
+                </label>
+              </div>
+              <p class="hint" id="namesCount"></p>
+            </div>
+          </div>
+
+          <!-- Courts -->
+          <div class="field row">
+            <label class="mini">Courts
+              <input type="number" id="courts" min="1" max="20" value="3" />
+            </label>
+          </div>
+
+          <!-- Goal -->
+          <div class="field">
+            <label>Goal</label>
+            <div class="segmented" id="goal">
+              <button class="seg active" data-goal="part1">Most games</button>
+              <button class="seg" data-goal="each">Everyone plays N</button>
+              <button class="seg" data-goal="total">Cap total games</button>
+            </div>
+
+            <div class="goal-detail" data-goal-pane="part1">
+              <label class="mini">Emphasis
+                <select id="emphasis">
+                  <option value="1" selected>Balanced</option>
+                  <option value="0">Full courts</option>
+                  <option value="2">Most variety</option>
+                </select>
+              </label>
+              <p class="hint">
+                Full courts keeps everyone playing; most variety minimizes repeat
+                opponents (a few may sit out). Balanced picks the better of the two.
+              </p>
+            </div>
+
+            <div class="goal-detail" data-goal-pane="each" hidden>
+              <label class="mini">Games each player plays
+                <input type="number" id="eachN" min="1" max="60" value="4" />
+              </label>
+              <p class="hint">Below the ceiling nobody repeats a partner or opponent; above it, repeats are spread as thinly as possible.</p>
+            </div>
+
+            <div class="goal-detail" data-goal-pane="total" hidden>
+              <label class="mini">Total games
+                <input type="number" id="totalG" min="1" max="400" value="12" />
+              </label>
+              <p class="hint">The last round may be partial to hit the count exactly.</p>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="generate" class="primary">Generate schedule</button>
+            <button id="reshuffle" class="ghost" title="Same settings, new arrangement">↻ Reshuffle</button>
+          </div>
+        </section>
+
+        <section id="results" class="results" hidden>
+          <div id="stats" class="stats" aria-label="Quality report"></div>
+          <div class="card table-card">
+            <div class="table-head">
+              <h2>Schedule</h2>
+              <button id="print" class="ghost">🖨 Print</button>
+            </div>
+            <div id="grid" class="grid-scroll"></div>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <p>
+          Runs entirely in your browser — the scheduling engine is compiled from
+          Rust to WebAssembly. <span class="nowrap">No data leaves your device.</span>
+        </p>
+      </footer>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

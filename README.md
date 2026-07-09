@@ -4,6 +4,17 @@ A scheduler for **mixed-doubles round-robin** play: given a set of men, a set of
 women, and some courts, build a schedule of games that is fair, packed, and
 provably close to optimal.
 
+## 🎾 Web app
+
+**Live at https://vio-eli.github.io/pickleball_scheduler/** — enter counts or
+player names, pick a goal, get a printable schedule. It runs *entirely in your
+browser*: the Rust engine is compiled to WebAssembly, so there's no server and
+no data leaves your device. Source is in [`web/`](web/); GitHub Actions
+([`.github/workflows/pages.yml`](.github/workflows/pages.yml)) builds the wasm
+with `wasm-pack` and deploys to Pages on every push to `main`.
+
+To run it locally: `wasm-pack build --release --target web --out-dir web/pkg -- --features wasm`, then serve `web/` with any static server (e.g. `python -m http.server -d web`).
+
 ## The problem
 
 A *game* is a mixed-doubles match — two teams, each a `(man, woman)` pair, so

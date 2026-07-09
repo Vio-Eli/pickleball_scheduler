@@ -12,6 +12,7 @@ pub mod search;
 pub mod tables;
 pub mod target;
 pub mod verify;
+pub mod wasm;
 
 #[cfg(test)]
 mod tests {
@@ -198,6 +199,23 @@ mod tests {
         assert_eq!(r.rounds, 10);
         assert_eq!(r.man_repeat_excess, r.man_repeat_floor);
         assert_eq!(r.woman_repeat_excess, r.woman_repeat_floor);
+    }
+
+    #[test]
+    fn wasm_json_has_expected_shape() {
+        use crate::wasm::generate_json;
+        // Part 1 balanced, 6×6/3 → 18 games, legal, well-formed JSON.
+        let j = generate_json(6, 6, 3, 1, 0, 7);
+        assert!(j.contains("\"games\":18"), "{}", j);
+        assert!(j.contains("\"maxGames\":18"));
+        assert!(j.contains("\"rounds\":[["));
+        assert!(j.contains("\"legal\":true"));
+        assert!(j.contains("\"gamesPerMan\":["));
+        // Part 2 each=8 (above ceiling) → forced partner repeats at floor 12.
+        let j2 = generate_json(6, 6, 3, 3, 8, 1);
+        assert!(j2.contains("\"partnerExcess\":12"), "{}", j2);
+        // Oversized input is rejected, not run.
+        assert!(generate_json(40, 40, 5, 1, 0, 1).contains("\"error\""));
     }
 
     #[test]
